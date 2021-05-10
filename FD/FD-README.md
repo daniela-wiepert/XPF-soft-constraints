@@ -37,3 +37,29 @@ List of project files/dependencies
     * This code generates all possible words that can be created given contexts + phoneme representations + probabilites.
     * all combined probabilites are calculated as log probabilites
 
+5. sample_baselines.py
+    * written by Rebecca Mathew
+    * adapted for final devoicing by Daniela Wiepert
+    * This code samples the generated lexicons to produce 100 artificial baseline languages per natural language
+
+
+6. compare_phoneme_frequencies.py
+    * written by Rebecca Mathew
+    * modified for final devoicing by Daniela Wiepert
+    * gets counts of all phonemes in all positions in the natural and in the generated lexicon
+
+7. compare_phoneme_frequences_initial.py
+
+8. compare_phoneme_frequencies_final.py
+
+9. filter_langs.py
+
+10. plot_phoneme_frequencies.py
+    * written by Rebecca Mathew
+    * adapted for final devoicing by Daniela Wiepert
+
+11. visualize.Rmd
+    * written by Rebecca Mathew
+    * adapted for final devoicing by Daniela Wiepert
+
+
