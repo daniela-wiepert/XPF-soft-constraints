@@ -58,7 +58,10 @@ List of project files/dependencies
     * written by Rebecca Mathew
     * adapted for final devoicing by Daniela Wiepert
 
-11. visualize.Rmd
+11. count_fd_violations.py 
+
+
+12. visualize.Rmd
     * written by Rebecca Mathew
     * adapted for final devoicing by Daniela Wiepert
 

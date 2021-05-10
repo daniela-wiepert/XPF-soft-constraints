@@ -11,7 +11,7 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 options(stringAsFactors = FALSE)
-setwd("/Users/danielawiepert/Documents/GitHub/thesis-project/Code")
+setwd("/Users/danielawiepert/Desktop/XPF-soft-constraints/FD/Code")
 ```
 
 ## R Markdown
@@ -21,7 +21,7 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r read}
-lang_codes <- read.csv("Data/filtered_codes25000_3.tsv", sep='\t', header=F)
+lang_codes <- read.csv("Data/filtered_codes5000_3.tsv", sep='\t', header=F)
 colnames(lang_codes) <- c("a","b","c")
 lang_codes <- unite(lang_codes,"code",'a','b','c',sep='')
 head(lang_codes)
@@ -111,9 +111,9 @@ for (i in c(1:nrow(lang_codes))) {
 ```
 
 ```{r reg-plots}
-ggsave(file="Data/final_voiced-filtered3.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[1:16], labels=lang_codes$code), width=12, height=8)
-ggsave(file="Data/final_voiced_2-filtered3.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[17:32], labels=lang_codes$code), width=12, height=8)
-ggsave(file="Data/final_voiced_3-filtered3.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[33:45], labels=lang_codes$code), width=12, height=8)
+ggsave(file="Data/plots/final_voiced-filtered.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[1:16], labels=lang_codes$code), width=12, height=8)
+ggsave(file="Data/plots/final_voiced_2-filtered.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[17:32], labels=lang_codes$code), width=12, height=8)
+ggsave(file="Data/plots/final_voiced_3-filtered.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[33:45], labels=lang_codes$code), width=12, height=8)
 # ggsave(file="Data/final_voiced.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[1:30], labels=lang_codes$code), width=12, height=8)
 # ggsave(file="Data/final_voiced_2.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[31:60], labels=lang_codes$code), width=12, height=8)
 # ggsave(file="Data/final_voiced_3.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[61:77], labels=lang_codes$code), width=12, height=8)
@@ -130,7 +130,7 @@ ggsave(file="Data/final_voiced_3-filtered3.pdf", gridExtra::arrangeGrob(grobs=fi
 ```{r den-plots}
 percentiles <- data.frame(lang_codes$code, final_voiced_obstruents, final_obstruents)
 #write.csv(percentiles, "Data/percentile.csv")
-write.csv(percentiles, "Data/percentiles-filtered3.csv")
+write.csv(percentiles, "Data/percentiles-filtered.csv")
 
 final_voiced_percentile_density <- ggplot(data.frame(x=percentiles$final_voiced_obstruents), aes(x, fill="red")) + 
   geom_density(aes(y=..scaled..)) + 
@@ -140,7 +140,7 @@ final_voiced_percentile_density <- ggplot(data.frame(x=percentiles$final_voiced_
   xlab("Percentile of natural language percent of violations compared to generated distribution") + 
   ylab("Density")
 #ggsave(final_voiced_percentile_density, file="Data/final_voiced_percentile_density.pdf", height=4, width=8)
-ggsave(final_voiced_percentile_density, file="Data/final_voiced_percentile_density-filtered3.pdf", height=4, width=8)
+ggsave(final_voiced_percentile_density, file="Data/plots/final_voiced_percentile_density-filtered.pdf", height=4, width=8)
 
 # final_voiceless_percentile_density <- ggplot(data.frame(x=percentiles$final_voiceless_obstruents), aes(x, fill="red")) + 
 #   geom_density(aes(y=..scaled..)) + 
