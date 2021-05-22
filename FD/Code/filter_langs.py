@@ -95,7 +95,7 @@ for lang_code in lang_codes:
 print(len(filtered_codes))
 print(filtered_codes)
 
-o_name  = "./Data/filtered_code" + identity + ".tsv"
+o_name  = "./Data/filtered_codes" + identity + ".tsv"
 with open(o_name, 'w+', newline='') as f:
     write =  csv.writer(f, delimiter="\t")
     write.writerows(filtered_codes)

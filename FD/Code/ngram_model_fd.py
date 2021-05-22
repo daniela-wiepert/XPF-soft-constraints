@@ -21,7 +21,7 @@ features = features.columns.values.tolist()
 to_feat = {} #dictonary of phoneme: feature representation 
 phon_model = {} #dictionary of feature representation: {possible phonemes: # of occurrences}
 
-def change_to_feat(phoneme):
+def change_to_feat(phoneme, previous):
     '''
     Takes in a character string representing the IPA form of the phoneme and returns a feature representation of the phoneme based on PHOIBLE features
     Input: phoneme - character string representing current phoneme
@@ -55,14 +55,14 @@ def change_to_feat(phoneme):
     #get feature 
     feat = to_feat.get(phoneme)
 
+    #context
+    con = " ".join([previous, feat])
     #add feature to phoneme model if it doesn't already exist
-    if phon_model.get(feat) is None:
-        phon_model[feat] = defaultdict(int)
+    if phon_model.get(con) is None:
+        phon_model[con] = defaultdict(int)
 
     # increment occurrence in phoneme model    
-    phon_model[feat][phoneme] += 1
-
-    # if next is not the end of word context ']_w', just return the phoneme (perfect context)
+    phon_model[con][phoneme] += 1
 
     return feat
 
@@ -94,7 +94,7 @@ def nphone_model(wordseglist, n=4, wordlen=8):
     prev_context = []
     for word in wordseglist: # each word is a list of exactly one string, the word
         prev_context = ['[_w'] # start of word
-
+        prev_phon = {}
         # don't use words that aren't perfectly translated to IPA
         if '@' in word.split(" "):
             continue 
@@ -106,25 +106,44 @@ def nphone_model(wordseglist, n=4, wordlen=8):
             continue
 
         word = word.replace(" ː", "ː")
+        prev_p = ''
+        str_context = ''
         for phoneme in word.split(" "): 
             if len(prev_context) == n:
-                str_context = " ".join([change_to_feat(p) for  p in prev_context])
+                if prev_context[0] == "[_w":
+                    f = ['[_w']
+                    for i in range(len(prev_context)-1):
+                        f.append(change_to_feat(prev_context[i+1],prev_context[i]))
+                else:
+                    con = [prev_phon[" ".join(prev_context)]]
+                    con.extend(prev_context)
+                    f = []
+                    for i in range(len(prev_context)-1):
+                        f.append(change_to_feat(prev_context[i+1],prev_context[i]))
+               
+                str_context = " ".join(f)
                 if model.get(str_context) is None:
                     model[str_context] = defaultdict(int)
                 model[str_context][phoneme] += 1
-            
+
+                prev_p = prev_context[0]
                 prev_context.pop(0) # remove earliest segment from context
             
             # update context
             prev_context.append(phoneme)
+            if len(prev_context) == n:
+                prev_phon[" ".join(prev_context)] = prev_p
 
         # add word-final context once you've reached the end of the word
         # remove voicing information at end of the word
         # TODO: check that this does what you're expecting it to
         if len(prev_context) >= n:
-            # f =  [change_to_feat(p,'') for p in prev_context[:-1]]
-            # f.append(change_to_feat(prev_context[-1],']_w'))
-            f = [change_to_feat(p) for p in prev_context]
+            f = []
+            for i in range(len(prev_context)):
+                if i==0:
+                    f.append(change_to_feat(prev_context[i],prev_phon[" ".join(prev_context)]))
+                else:
+                    f.append(change_to_feat(prev_context[i],prev_context[i-1]))
             str_context = " ".join(f)
             if model.get(str_context) is None:
                 model[str_context] = defaultdict(int)
