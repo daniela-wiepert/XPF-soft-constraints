@@ -42,24 +42,29 @@ List of project files/dependencies
     * adapted for final devoicing by Daniela Wiepert
     * This code samples the generated lexicons to produce 100 artificial baseline languages per natural language
 
-
 6. compare_phoneme_frequencies.py
     * written by Rebecca Mathew
     * modified for final devoicing by Daniela Wiepert
     * gets counts of all phonemes in all positions in the natural and in the generated lexicon
 
 7. compare_phoneme_frequences_initial.py
+    * written by Rebecca Mathew
+    * modified for final devoicing by Daniela Wiepert
 
 8. compare_phoneme_frequencies_final.py
+    * written by Rebecca Mathew
+    * modified for final devoicing by Daniela Wiepert
 
 9. filter_langs.py
+    * written by Daniela Wiepert
 
 10. plot_phoneme_frequencies.py
     * written by Rebecca Mathew
     * adapted for final devoicing by Daniela Wiepert
 
 11. count_fd_violations.py 
-
+    * written by Rebecca Mathew
+    * modified for final devoicing by Daniela Wiepert
 
 12. visualize.Rmd
     * written by Rebecca Mathew
