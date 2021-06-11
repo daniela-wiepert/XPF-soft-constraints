@@ -12,7 +12,7 @@ def main(argv):
     ## Specify the language info - code, data files, etc.
     ##
     parser.add_argument("-l", "--lang-list", dest="langlist",
-                        default='/Volumes/XPF/Data/langs-list-03.tsv',
+                        default='/mnt/z/Data/langs-list-03.tsv',
                         help="contains all data for a given language")
     ##
     ## Specify whether to use top 5000 words or top 10000 words
@@ -38,7 +38,7 @@ def main(argv):
     c = options["countlimit"]
     a = options["arg2"]
 
-    f_name = 'Data/word_list' + str(c) + '_' + str(a) + '.tsv'                             #create file name for output
+    f_name = 'word_list' + str(c) + '_' + str(a) + '.tsv'                             #create file name for output
 
     with open(f_name, 'w', newline='') as f:                            #Prep TSV file
         write =  csv.writer(f, delimiter="\t")
@@ -52,7 +52,7 @@ def main(argv):
     for row in read_list:                           #for each language
         if r != 0:                                  #first row contains headers - skip
             code = row[0]
-            cmd1  = 'bzcat /Volumes/XPF/' + row[6] + ' | bash /Volumes/XPF/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /Volumes/XPF/Code/sumstats01.py -l /Volumes/XPF/' + row[4]
+            cmd1  = 'bzcat /mnt/z/' + row[6] + ' | bash /mnt/z/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /mnt/z/Code/sumstats01.py -l /mnt/z/' + row[4]
             sub1 = subprocess.Popen(cmd1,shell=True,stdout=subprocess.PIPE)
 
             t = 0       #total words processed
@@ -69,7 +69,7 @@ def main(argv):
                     p = float(i)
 
             if t >= int(c) and p <= 2.0:          #if total words >= 5000 and %@ words <= 2%
-                cmd = 'bzcat /Volumes/XPF/' + row[6] + ' | sh /Volumes/XPF/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /Volumes/XPF/Code/translate04.py -l /Volumes/XPF/' + row[4] + ' -r - | cut -f2'
+                cmd = 'bzcat /mnt/z/' + row[7] + ' | sh /mnt/z/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /mnt/z/Code/translate04.py -l /mnt/z/' + row[4] + ' -r - | cut -f2'
                 sub = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE)
 
                 for line in sub.stdout:
