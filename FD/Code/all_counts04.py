@@ -52,7 +52,7 @@ def main(argv):
     for row in read_list:                           #for each language
         if r != 0:                                  #first row contains headers - skip
             code = row[0]
-            cmd1  = 'bzcat /mnt/z/' + row[6] + ' | bash /mnt/z/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /mnt/z/Code/sumstats01.py -l /mnt/z/' + row[4]
+            cmd1  = 'bzcat /mnt/z/' + row[7] + ' | bash /mnt/z/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /mnt/z/Code/sumstats01.py -l /mnt/z/' + row[5]
             sub1 = subprocess.Popen(cmd1,shell=True,stdout=subprocess.PIPE)
 
             t = 0       #total words processed
@@ -69,7 +69,7 @@ def main(argv):
                     p = float(i)
 
             if t >= int(c) and p <= 2.0:          #if total words >= 5000 and %@ words <= 2%
-                cmd = 'bzcat /mnt/z/' + row[7] + ' | sh /mnt/z/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /mnt/z/Code/translate04.py -l /mnt/z/' + row[4] + ' -r - | cut -f2'
+                cmd = 'bzcat /mnt/z/' + row[7] + ' | sh /mnt/z/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /mnt/z/Code/translate04.py -l /mnt/z/' + row[5] + ' -r - | cut -f2'
                 sub = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE)
 
                 for line in sub.stdout:
