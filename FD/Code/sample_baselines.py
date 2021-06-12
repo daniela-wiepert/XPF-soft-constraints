@@ -4,7 +4,7 @@ import json
 import csv
 from collections import defaultdict
 
-NUM_SAMPLES = 100 # number of artificial baselines per natural language
+NUM_SAMPLES = 1000 # number of artificial baselines per natural language
 
 def main():
     word_lists = []
