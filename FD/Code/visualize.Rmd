@@ -11,6 +11,7 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 options(stringAsFactors = FALSE)
+
 setwd("/Users/danielawiepert/Desktop/XPF-soft-constraints/FD/Code")
 ```
 
@@ -70,7 +71,7 @@ for (i in c(1:nrow(lang_codes))) {
   final_voiced_obstruents_plot <- ggplot(data.frame(x=artificial$final_voiced_obstruents), aes(x, color="red")) +
     geom_density(aes(y=..scaled..)) + 
     theme_minimal() + 
-    theme(legend.position = "none") + 
+    theme(legend.position = "none",text=element_text(family="serif")) + 
     xlab("Violations (%)") +
     ylab("Density") + 
     ggtitle(paste(code, "final voiced obstruents")) +
@@ -128,14 +129,14 @@ ggsave(file="Data/plots/final_voiced_3-filtered.pdf", gridExtra::arrangeGrob(gro
 ```
 
 ```{r den-plots}
-percentiles <- data.frame(lang_codes$code, final_voiced_obstruents, final_obstruents)
+percentiles <- data.frame(lang_codes$code, final_voiced_obstruents)
 #write.csv(percentiles, "Data/percentile.csv")
 write.csv(percentiles, "Data/percentiles-filtered.csv")
 
 final_voiced_percentile_density <- ggplot(data.frame(x=percentiles$final_voiced_obstruents), aes(x, fill="red")) + 
   geom_density(aes(y=..scaled..)) + 
   theme_minimal() + 
-  theme(legend.position = "none") + 
+  theme(legend.position = "none",text=element_text(family="serif")) + 
   ggtitle("Distribution of final voiced obstruent percentiles") + 
   xlab("Percentile of natural language percent of violations compared to generated distribution") + 
   ylab("Density")
