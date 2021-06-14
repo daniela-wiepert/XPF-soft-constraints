@@ -22,11 +22,6 @@ for lang_code in lang_codes:
     r = (counter // num_cols) 
     c = counter - (r * num_cols)
 
-    # if r > c:
-    #     r = r - 1
-    # else:
-    #     c = c - 1
-
     generated = {}
     natural = {}
 
@@ -66,7 +61,6 @@ for lang_code in lang_codes:
 
 figure = plt.gcf()
 figure.set_size_inches(20, 48)
-plt.tight_layout()
 if not os.path.exists('./Data/plots/'):
     os.makedirs('./Data/plots/')
 plt.savefig("Data/plots/subplots-filtered.png")

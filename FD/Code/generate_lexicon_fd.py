@@ -70,9 +70,6 @@ def reconstruct_con(context):
 
     p,pr  = reconstruct_phon(curr,prev)
     pr = np.log(pr)
-    # for i in range(len(pr)):
-    #     if pr[i] == float('-inf'):
-    #         pr[i] = 0.0
 
     for ph in p:
         phon.append([ph])
@@ -96,9 +93,6 @@ def reconstruct_con(context):
             #reconstruct    
             p,pr = reconstruct_phon(next_feat,prev_phon[-1])
             pr = np.log(pr)
-            # for i in range(len(pr)):
-            #     if pr[i] == float('-inf'):
-            #         pr[i] = 0.0
 
             for i in range(len(p)):
                 new_phon = []
@@ -110,85 +104,6 @@ def reconstruct_con(context):
     return final_phon, final_prob
 
 
-    # curr = context.pop(0)
-    # prev_con = phon.pop(0)
-    # prev_prob = prob.pop(0)
-
-    # while len(prev_con) <= length - 1: 
-    
-    #     p,pr  = reconstruct_phon(curr,prev)
-    #     pr = np.log(pr)
-    #     for i in range(len(pr)):
-    #         if pr[i] == float('-inf'):
-    #             pr[i] = 0.0
-        
-    # lev = 0
-    # prev = [context[0]]
-    # for feat in context[1:]:
-    #     for poss in prev:
-    #         p,pr = reconstruct_phon(feat,poss)
-    #         pr = np.log(pr)
-    #         for i in range(len(pr)):
-    #             if pr[i] == float('-inf'):
-    #                 pr[i] = 0.0
-    #         prev = p
-    #         curr_len = len(phon)
-    #         if len(p) > 0 and len(pr) > 0:
-    #             if curr_len == 0:
-    #                 phon.extend(p)
-    #                 prob.extend(pr)
-    #             else:
-    #                 for j in range(len(p)):
-    #                     for i in range(curr_len):
-    #                         if len(phon[i]) == lev:
-    #                             con = " ".join([phon[i],p[j]])
-    #                             pro = prob[i] + pr[j]
-    #                             phon.append(con)
-    #                             prob.append(pro)
-    #     lev += 1
-
-            
-    #     #     if (not prev_phon) and (not p) and (not pr):
-    #     #         prev_phon.extend(p)
-    #     #         prev_prob.extend(pr)
-    #     #     elif (not p) and (not pr):
-    #     #         for i in range(len(prev_phon)):
-    #     #             for j in range(len(phon)):
-    #     #                 phon[j].append(" ".join([]))
-
-
-
-
-    #     # if len(feat) < 5:
-    #     #     prev = feat 
-    #     #     phon.append([feat]
-    #     #     prob.append([0.0])
-    #     # elif len(prev) == 1:
-    #     #     p,pr = reconstruct_phon(feat,prev[0])
-    #     #     prev = p
-    #     #     phon.append(p)
-    #     #     pr = np.log(pr)
-    #     #     for i in range(len(pr)):
-    #     #         if pr[i] == float('-inf'):
-    #     #             pr[i] = 0.0
-    #     #     prob.append(pr)
-    #     # else:
-    #     #     for ph in prev:
-    #     #         p,pr = reconstruct_phon(feat,ph)
-    #     #         if not p and not pr
-    #     #             prev = p
-    #     #             phon.append(p)
-    #     #             pr = np.log(pr)
-    #     #             for i in range(len(pr)):
-    #     #                 if pr[i] == float('-inf'):
-    #     #                     pr[i] = 0.0
-    #     #             prob.append(pr)
-    # contexts, context_prob = make_contexts(phon,prob)
-    # #if len(contexts) > 1:
-    #    # print('hi')
-    # return contexts,context_prob
-
-#TODO: check this
 def make_contexts(poss,prob,contexts=[],context_prob=[]):
     '''
     all possible contexts
@@ -213,9 +128,6 @@ def make_contexts(poss,prob,contexts=[],context_prob=[]):
                 con.append(c + ' ' + p[j])
                 con_prob.append(pr[j]+cpr)
 
-
-
-
     return make_contexts(poss,prob,con,con_prob)
 
 def generate_phoneme(model, wordlen=8, context='', n=4, current_prob=None):
@@ -234,8 +146,6 @@ def generate_phoneme(model, wordlen=8, context='', n=4, current_prob=None):
         new_context = " ".join(context) + " " + seg
         prob = in_seg[seg] / total_count
         prob = np.log(prob)
-        # if prob == float('-inf'):
-        #     prob = 0.0
         # continue generating the rest of this word
         generate_lexicon(model, wordlen, new_context, n, current_prob + prob)
     
@@ -278,8 +188,6 @@ def generate_lexicon(model, wordlen=8, context="", n=4, current_prob=None):
                 if model.get(prev_context) != None:
                     prob = initial_context_prob(model, prev_context)
                     func_context = prev_context
-                    # if prob == float('-inf'):
-                    #         prob = 0.0
                     generate_phoneme(model, wordlen,func_context,n,prob)
     else:
         if context[-3:] == "]_w":
@@ -305,13 +213,11 @@ def main():
 
     lang_codes = []
     identity = '5000_3'
-    #identity = 'practice'
 
     with open("Data/lang_codes"+identity+".tsv", 'r') as fin:
         reader = csv.reader(fin, delimiter='\t')
         lang_codes = list(reader)
 
-    #TODO: CHANGE BACK TO JUST LANG_CODES
     for lang_code in lang_codes:
         lang_code = ''.join(lang_code)
         print("lang code: ", lang_code)

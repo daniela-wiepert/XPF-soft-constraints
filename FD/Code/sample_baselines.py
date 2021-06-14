@@ -9,7 +9,6 @@ NUM_SAMPLES = 1000 # number of artificial baselines per natural language
 def main():
     word_lists = []
     identity ='5000_3' 
-    #identity = 'practice'
     f_name = "Data/word_list"+identity+".tsv"
 
     tsv_file = open(f_name)
@@ -41,7 +40,6 @@ def main():
         with open("./Data/generated_words/" + lang + "_generated_words.json", 'r', encoding='utf8') as fin:
             all_words = json.load(fin)
 
-        # df = pd.DataFrame.from_records(all_words, index=list(range(len(all_words.keys()))))
         df = pd.DataFrame({'word': list(all_words.keys()), 
                            'prob': list(all_words.values())})
 

@@ -68,7 +68,7 @@ for (i in c(1:nrow(lang_codes))) {
   
   # final voiced obstruents
   
-  final_voiced_obstruents_plot <- ggplot(data.frame(x=artificial$final_voiced_obstruents), aes(x, color="red")) +
+  final_voiced_obstruents_plot <- ggplot(data.frame(x=artificial$final_voiced_obstruents), aes(x, color="red",fill="red",alpha=.5)) +
     geom_density(aes(y=..scaled..)) + 
     theme_minimal() + 
     theme(legend.position = "none",text=element_text(family="serif")) + 
@@ -81,33 +81,6 @@ for (i in c(1:nrow(lang_codes))) {
   final_voiced_obstruents <- append(final_voiced_obstruents, final_voiced_obstruents_percentile)
   final_voiced_obstruents_plots[[i]] = final_voiced_obstruents_plot
   
-  # final obstruents
- final_obstruents_plot <- ggplot(data.frame(x=artificial$final_obstruents), aes(x, color="red")) +
-    geom_density(aes(y=..scaled..)) + 
-    theme_minimal() + 
-    theme(legend.position = "none") + 
-    xlab("Violations (%)") +
-    ylab("Density") + 
-    ggtitle(paste(code, "final obstruents")) +
-    geom_vline(xintercept=natural$final_obstruents)
-  # ggsave(same_fricatives_plot, file=paste("visualizations/", code, "_same_fricatives.pdf", sep=""), height=4, width=8)
-  final_obstruents_percentile <- ecdf(artificial$final_obstruents)(natural$final_obstruents)
-  final_obstruents <- append(final_obstruents, final_obstruents_percentile)
-  final_obstruents_plots[[i]] = final_obstruents_plot
-  
-  # final voiceless obstruents
-  final_voiceless_obstruents_plot <- ggplot(data.frame(x=artificial$final_voiceless_obstruents), aes(x, color="red")) +
-    geom_density(aes(y=..scaled..)) + 
-    theme_minimal() + 
-    theme(legend.position = "none") + 
-    xlab("Violations (%)") +
-    ylab("Density") + 
-    ggtitle(paste(code, "final voiceless obstruents")) +
-    geom_vline(xintercept=natural$final_voiceless_obstruents)
-  # ggsave(same_fricatives_plot, file=paste("visualizations/", code, "_same_fricatives.pdf", sep=""), height=4, width=8)
-  final_voiceless_obstruents_percentile <- ecdf(artificial$final_voiceless_obstruents)(natural$final_voiceless_obstruents)
-  final_voiceless_obstruents <- append(final_voiceless_obstruents, final_voiceless_obstruents_percentile)
-  final_voiceless_obstruents_plots[[i]] = final_voiceless_obstruents_plot
 }
 ```
 
@@ -115,22 +88,11 @@ for (i in c(1:nrow(lang_codes))) {
 ggsave(file="Data/plots/final_voiced-filtered.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[1:16], labels=lang_codes$code), width=12, height=8)
 ggsave(file="Data/plots/final_voiced_2-filtered.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[17:32], labels=lang_codes$code), width=12, height=8)
 ggsave(file="Data/plots/final_voiced_3-filtered.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[33:45], labels=lang_codes$code), width=12, height=8)
-# ggsave(file="Data/final_voiced.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[1:30], labels=lang_codes$code), width=12, height=8)
-# ggsave(file="Data/final_voiced_2.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[31:60], labels=lang_codes$code), width=12, height=8)
-# ggsave(file="Data/final_voiced_3.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[61:77], labels=lang_codes$code), width=12, height=8)
 
-# ggsave(file="Data/final_voiceless.pdf", gridExtra::arrangeGrob(grobs=final_voiceless_obstruents_plots[1:30], labels=lang_codes$code), width=12, height=8)
-# ggsave(file="Data/final_voiceless_2.pdf", gridExtra::arrangeGrob(grobs=final_voiceless_obstruents_plots[31:60], labels=lang_codes$code), width=12, height=8)
-# ggsave(file="Data/final_voiceless_3.pdf", gridExtra::arrangeGrob(grobs=final_voiceless_obstruents_plots[61:77], labels=lang_codes$code), width=12, height=8)
-# 
-# ggsave(file="Data/final_obstruent.pdf", gridExtra::arrangeGrob(grobs=final_obstruents_plots[1:30], labels=lang_codes$code), width=12, height=8)
-# ggsave(file="Data/final_obstruent_2.pdf", gridExtra::arrangeGrob(grobs=final_obstruents_plots[31:60], labels=lang_codes$code), width=12, height=8)
-# ggsave(file="Data/final_obstruent_3.pdf", gridExtra::arrangeGrob(grobs=final_obstruents_plots[61:77], labels=lang_codes$code), width=12, height=8)
 ```
 
 ```{r den-plots}
 percentiles <- data.frame(lang_codes$code, final_voiced_obstruents)
-#write.csv(percentiles, "Data/percentile.csv")
 write.csv(percentiles, "Data/percentiles-filtered.csv")
 
 final_voiced_percentile_density <- ggplot(data.frame(x=percentiles$final_voiced_obstruents), aes(x, fill="red")) + 
@@ -140,31 +102,7 @@ final_voiced_percentile_density <- ggplot(data.frame(x=percentiles$final_voiced_
   ggtitle("Distribution of final voiced obstruent percentiles") + 
   xlab("Percentile of natural language percent of violations compared to generated distribution") + 
   ylab("Density")
-#ggsave(final_voiced_percentile_density, file="Data/final_voiced_percentile_density.pdf", height=4, width=8)
 ggsave(final_voiced_percentile_density, file="Data/plots/final_voiced_percentile_density-filtered.pdf", height=4, width=8)
 
-# final_voiceless_percentile_density <- ggplot(data.frame(x=percentiles$final_voiceless_obstruents), aes(x, fill="red")) + 
-#   geom_density(aes(y=..scaled..)) + 
-#   theme_minimal() + 
-#   theme(legend.position = "none") + 
-#   ggtitle("Distribution of final voiceless obstruent percentiles") + 
-#   xlab("Percentile of natural language percent of violations compared to generated distribution") + 
-#   ylab("Density")
-# ggsave(final_voiceless_percentile_density, file="Data/final_voiceless_percentile_density.pdf", height=4, width=8)
-# 
-# final_obstruents_percentile_density <- ggplot(data.frame(x=percentiles$final_obstruents), aes(x, fill="red")) + 
-#   geom_density(aes(y=..scaled..)) + 
-#   theme_minimal() + 
-#   theme(legend.position = "none") + 
-#   ggtitle("Distribution of final obstruent percentiles") + 
-#   xlab("Percentile of natural language percent of violations compared to generated distribution") + 
-#   ylab("Density")
-# ggsave(final_obstruents_percentile_density, file="Data/final_obstruent_percentile_density.pdf", height=4, width=8)
-
-# ggsave(file="Data/percentile_density_plots.pdf", 
-#        gridExtra::arrangeGrob(grobs=list(final_voiced_percentile_density,
-#                                          final_voiceless_percentile_density,
-#                                          final_obstruents_percentile_density)),
-#        height=8, width=16)
 ```
 

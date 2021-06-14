@@ -1,5 +1,3 @@
-#FLAT N-GRAM MODEL - also need to add that it only removes phoneme information from word final position 
-#basically, if context ends in ____ and next possible context is ]_w remove? ask about this to double check, for now keep things
 from collections import Counter, defaultdict
 import pandas as pd
 import os
@@ -49,8 +47,7 @@ def change_to_feat(phoneme, previous):
                 to_feat[phoneme] = phoneme
         else:
             to_feat[phoneme] = phoneme
-    
-                    #if phon_model.get(feat) is NONE and feat represents an obstruent, set up
+
     
     #get feature 
     feat = to_feat.get(phoneme)
@@ -136,7 +133,6 @@ def nphone_model(wordseglist, n=4, wordlen=8):
 
         # add word-final context once you've reached the end of the word
         # remove voicing information at end of the word
-        # TODO: check that this does what you're expecting it to
         if len(prev_context) >= n:
             f = []
             for i in range(len(prev_context)):
@@ -187,7 +183,6 @@ def main():
         lang_codes.append(lang)
         curr_list = split_list[lang] 
         
-        #TODO: can change wordlen later
         model = nphone_model(curr_list,wordlen=10)
 
         outfile = "./Data/utf8_ngram_models/"

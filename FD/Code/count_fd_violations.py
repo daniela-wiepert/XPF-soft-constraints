@@ -14,7 +14,6 @@ phoible_fricatives = set(obstruents[obstruents['continuant'] == '+']["Phoneme"])
 phoible_voiced = set(obstruents[obstruents['periodicGlottalSource'] == '+']["Phoneme"])
 phoible_voiceless = set(obstruents[obstruents['periodicGlottalSource'] == '-']["Phoneme"])
 phoible_obstruents = set(obstruents[:]["Phoneme"])
-#OR approximant != '+'?? for fricatives?
 
 def is_obstruent(phoneme):
     return int(phoneme in phoible_obstruents)
@@ -22,21 +21,9 @@ def is_obstruent(phoneme):
 def is_voiced(phoneme):
     return int(phoneme in phoible_voiced)
 
-# def is_stop(phoneme):
-#     return int(phoneme in phoible_stops)
-
-# def is_affricate(phoneme):
-#     return int(phoneme in phoible_affricates)
-
-# def is_fricative(phoneme):
-#     return int(phoneme in phoible_fricatives)
 
 def is_voiceless(phoneme):
     return int(phoneme in phoible_voiceless)
-
-# def is_sibilant(phoneme):
-#     phoneme = phoible_ipa(phoneme)
-#     return int(phoneme in phoible_sibilants)
 
 def voiced_final(word):
     '''
@@ -54,40 +41,6 @@ def voiced_final(word):
     if is_obstruent(phon) and is_voiced(phon):
         return 1
     return 0
-
-def voiceless_final(word):
-    '''
-    Parameters:
-     - word: A list of a single string of the phonemic form of a word, where phonemes
-      are separated by spaces. For example, ['[_w t i p ]_w']
-
-    Returns a Boolean indicating if there is a voiceless obstruent word finally. 
-    '''
-    word = word.split(" ")
-    #TODO: CHECK THIS GETS THE RIGHT THING
-    phon = word[-1]
-    if word[-1] == "]_w":
-        phon = word[-2]
-    if is_obstruent(phon) and is_voiceless(phon):
-        return 1
-    return 0 
-
-def obs_final(word):
-    '''
-    Parameters:
-     - word: A list of a single string of the phonemic form of a word, where phonemes
-      are separated by spaces. For example, ['[_w t i p ]_w']
-
-    Returns a Boolean indicating if there is an obstruent word finally. 
-    '''
-    word = word.split(" ")
-    #TODO: CHECK THIS GETS THE RIGHT THING
-    phon = word[-1]
-    if word[-1] == "]_w":
-        phon = word[-2]
-    if is_obstruent(phon):
-        return 1
-    return 0 
 
 def main():
     lang_codes = []
@@ -123,9 +76,7 @@ def main():
 
         for roots, dirs, files in os.walk('Data/artificial_baselines/' + lang_code):
             final_voiced_lst = []
-            final_voiceless_lst = []
-            final_obs_lst = []
-        
+            
             for f in files:
                 baseline = [] # the list of words in this artificial baseline
                 with open('Data/artificial_baselines/' + lang_code + '/' + f, 'r', encoding='utf8') as fin:
@@ -136,17 +87,15 @@ def main():
                                 
                 # Percent of FD violations
                 final_voiced_lst.append(sum(map(voiced_final,baseline)) /baseline_len)
-                final_voiceless_lst.append(sum(map(voiceless_final,baseline)) /baseline_len)
-                final_obs_lst.append(sum(map(obs_final,baseline)) /baseline_len)
                 
             if not os.path.exists('Data/distributions/'):
                 os.makedirs('Data/distributions/')
 
             with open('Data/distributions/' + lang_code + '_artificial.csv', 'w') as fout:
                 write = csv.writer(fout)
-                write.writerow(['final_voiced_obstruents','final_voiceless_obstruents','final_obstruents'])
+                write.writerow(['final_voiced_obstruents'])
                 for i in range(len(final_voiced_lst)):
-                    write.writerow([final_voiced_lst[i],final_voiceless_lst[i],final_obs_lst[i]])        
+                    write.writerow([final_voiced_lst[i]])        
 
         natural_lexicon = split_list[lang_code]
 
@@ -155,14 +104,11 @@ def main():
         filtered_lexicon_len = len(filtered_lexicon)
 
         final_voiced_val = sum(map(voiced_final, filtered_lexicon)) / filtered_lexicon_len
-        final_voiceless_val = sum(map(voiceless_final, filtered_lexicon)) / filtered_lexicon_len
-        final_obs_val = sum(map(obs_final, filtered_lexicon)) / filtered_lexicon_len
-
     
         with open('Data/distributions/' + lang_code + '_natural.csv', 'w') as fout:
             write = csv.writer(fout)
-            write.writerow(['final_voiced_obstruents','final_voiceless_obstruent','final_obstruents'])
-            write.writerow([final_voiced_val,final_voiceless_val,final_obs_val])        
+            write.writerow(['final_voiced_obstruents'])
+            write.writerow([final_voiced_val])        
 
     return None
 

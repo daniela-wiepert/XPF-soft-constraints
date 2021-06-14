@@ -6,8 +6,7 @@ import json
 
 def main():
     word_lists = []
-    identity ='5000_3'   ##TODO: CHANGE THIS????
-    #identity = 'practice'
+    identity ='5000_3' 
     f_name = "Data/word_list"+identity+".tsv"
 
     tsv_file = open(f_name)
@@ -39,7 +38,6 @@ def main():
 
         natural_phoneme_count = defaultdict(int)
         for wd in filtered_lexicon:
-            #TODO: check whether this should be wd[0] or just wd
             for phon in wd.split(" "):
                 natural_phoneme_count[phon] += 1
 

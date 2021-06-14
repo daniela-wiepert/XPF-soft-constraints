@@ -23,16 +23,12 @@ features = phoneme_features.copy()
 features.drop(["Phoneme","voice"],axis="columns", inplace=True)
 features = features.columns.values.tolist()
 
+
+count = 0
+
 for lang_code in lang_codes: 
     lang_code = ''.join(lang_code)
-    # r = (counter // num_cols) 
-    # c = counter - (r * num_cols)
-
-    # if r > c:
-    #     r = r - 1
-    # else:
-    #     c = c - 1
-
+    
     voiced = 0
     voiceless = 0
     any_final = 0
@@ -75,6 +71,9 @@ for lang_code in lang_codes:
                     elif row["voice"].tolist()[0] == "-":
                         voiceless += v
 
+    if any_final < 10  or any_initial < 10 or obs_final < 10 or obs_initial < 10 or voiceless < 10 or voiced < 10:
+        count += 1
+    
     if any_final != 0  and  any_initial != 0:
         if math.log(any_final/any_initial) < 0:
             f1.append(lang_code)
