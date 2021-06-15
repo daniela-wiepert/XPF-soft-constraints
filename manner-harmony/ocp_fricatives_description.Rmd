@@ -1,0 +1,1030 @@
+---
+title: "OCP Analysis"
+author: "Becky Mathew"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+setwd("C:/Users/CodeB/Documents/GitHub/XPF-Daniela-Project/ocp_fricatives") # TODO: Change to your own file path
+```
+
+I wrote most of my code in Python, which I've copy and pasted here. I'm not actually executing most of the code in this file, since that would take a long time and rewrite what I've already done.
+
+# Code 
+## Natural language wordlists
+This script here was mostly written by Daniela. We filter for languages that have more than 5000 unique types, and for which less than 2% of the words are untranslatable by the XPF rules (doesn't have an '@' sign). I then collect a list of those 5000 most frequent types (and all other types at the 5000th word's frequency) for each viable language.
+
+```{python, eval=FALSE}
+
+import subprocess
+import argparse
+import csv
+import sys
+from sys import stdin
+
+def main(argv):
+    parser =  argparse.ArgumentParser()
+    ##
+    ## Specify the language info - code, data files, etc.
+    ##
+    parser.add_argument("-l", "--lang-list", dest="langlist",
+                        default='/mnt/z/Data/langs-list-03.tsv',
+                        help="contains all data for a given language")
+    ##
+    ## Specify whether to use top 5000 words or top 10000 words
+    ##
+    parser.add_argument("-c", "--count-limit", dest = "countlimit", default = 5000,
+                        help = "choose amount of most frequent words (top 5000 most frequent words/top 10000 etc.)")
+
+
+    ##
+    ## Specify second arg of stopatn
+    ##
+    parser.add_argument("-f", "--arg2", dest = "arg2", default = 3)
+
+    ##
+    ## Print Summary?
+    ##
+    parser.add_argument("-N", "--no-summary", dest="nosummary",
+                        default=False, action="store_true",
+                        help="suppress summary information")
+
+    options = vars(parser.parse_args(argv))
+
+    c = options["countlimit"]
+    a = options["arg2"]
+
+    f_name = 'counts' + str(c) + '_' + str(a) + '.tsv'                             #create file name for output
+
+    with open(f_name, 'w', newline='') as f:                            #Prep TSV file
+        write =  csv.writer(f, delimiter="\t")
+        write.writerow(['Language', 'Phoneme', 'Onset', 'Coda', 'Total'])
+
+    tsv_file = open(options["langlist"])
+    read_list = csv.reader(tsv_file,delimiter="\t")
+
+    num_languages = 0
+    r = 0
+    for row in read_list:                           #for each language
+        if r != 0:                                  #first row contains headers - skip
+            code = row[0]
+
+            cmd1 = 'bzcat /mnt/z/' + row[6] + ' | bash /mnt/z/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /mnt/z/Code/sumstats01.py -l /mnt/z/' + row[4]
+            sub1 = subprocess.Popen(cmd1,shell=True,stdout=subprocess.PIPE)
+
+            t = 0       #total words processed
+            p = 0.0     #percent @ words
+
+            for line in sub1.stdout:        #read output from sumstats01
+                line.rstrip()
+                info = line.split()
+                check = info[1].decode("utf-8")
+                i = info[-1].decode("utf-8")
+                if check == 'processed':
+                    t = int(i)
+                if check == '%@':
+                    p = float(i)
+
+            if t >= int(c) and p <= 2.0:          #if total words >= 5000 and %@ words <= 2%
+                # Getting the top 5000+ words for this language in IPA form
+                cmd = 'bzcat /mnt/z/' + row[6] + ' | sh /mnt/z/Code/stopatn.sh ' + str(c) + ' ' + str(a) + ' | python3 /mnt/z/Code/translate04.py -l /mnt/z/' + row[4] + ' -r - | cut -f2 | python3 wordseg.py'
+                sub = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE)
+
+                word_list = []
+                for line in sub.stdout:
+                    line = line.rstrip()
+                    word_list.append([line.decode("utf-8")])
+
+                with open("word_lists/" + code + "_word_list.tsv", 'a+', newline='') as f:
+                    write =  csv.writer(f, delimiter="\t")
+                    write.writerows(word_list)
+
+                num_languages += 1
+        r += 1
+    print("Language Count")
+    print(num_languages)
+    
+if __name__ == "__main__":
+    main(sys.argv[1:])
+```
+
+## n-gram models 
+Next, we want to create an n-gram model (n=4) for each language. We'll create a CV model (predicts whether the next segment is a consonant, vowel, or the end of the word), a consonant model (sees an imperfect representation and knows that it has to predict a consonant next), and a vowel model (sees a perfect 4-gram representation and knows that it has to predict a vowel next).
+```{python, eval = FALSE}
+from collections import Counter, defaultdict
+import pandas as pd
+import os
+import csv
+import json
+
+phoneme_features = pd.read_csv("data/phoible_unique_phonemes.csv")
+
+def phoible_ipa(phoneme):
+    '''
+    Some of the XPF IPA doesn't match the PHOIBLE IPA. 
+    Resolving mismatches.
+    '''
+    phoible_affricates = {'tʃ': 't̠ʃ',
+    "dʒ": 'd̠ʒ',
+    "tʃʼ": 't̠ʃʼ',
+    "tʃʰ": 't̠ʃʰ'}
+
+    phoible_prenasals = {"ⁿ": "n",
+                "ᵐ": "m",
+                "ᵑ": "ŋ",
+                "ᶯ": "ɳ",
+                "ᶮ": "ɲ" }
+
+    if phoible_affricates.get(phoneme) != None:
+        return phoible_affricates[phoneme]
+    elif phoible_prenasals.get(phoneme[0]) != None:
+        return phoible_prenasals.get(phoneme[0]) + phoneme[1:]
+    else:
+        return phoneme
+
+def not_in_phoible(phoneme):
+    '''
+    If original phoneme is not in PHOIBLE, try to determine a close match. 
+    A close match is acceptable in these cases since we only want to know if it's a consonant or a vowel.
+    '''
+    if phoneme == "":
+        # if no other guess can be made, guess that it's a consonant
+        return 'C'
+
+    # PHOIBLE often has errors with phonemes that are represented with multiple IPA letters
+    # like geminated palatalized affricates
+    # so we're trying to find the nearest match by either removing the first or last part of that IPA representation
+    # which shouldn't affect recognition as either a consonant or a vowel
+    row = phoneme_features[phoneme_features["Phoneme"] == phoneme[1:]]
+    
+    if not row.empty:
+        return 'C' if row["SegmentClass"].item() == 'consonant' else 'V'
+    else:
+        row = phoneme_features[phoneme_features["Phoneme"] == phoneme[:-1]]
+        if not row.empty:
+            return 'C' if row["SegmentClass"].item() == 'consonant' else 'V'
+        else:
+            return not_in_phoible(phoneme[1:-1])
+
+def cv_representation(phoneme):
+    '''
+    Return string representation of phoneme for consonant-vowel model. 
+    '''
+    phoneme = phoible_ipa(phoneme)
+    row = phoneme_features[phoneme_features["Phoneme"] == phoneme] # TODO: there might be orthographic differences
+
+    if row.empty:
+        return not_in_phoible(phoneme)
+
+    if row["SegmentClass"].item() == "consonant":
+        return 'C'
+    else:
+        return 'V'
+
+def consonant_representation(phoneme):
+    '''
+    The consonant model sees an imperfect representation of prior context. 
+    Consonants should be represented as 'C' and vowels remain as they are. 
+    '''
+    phoneme = phoible_ipa(phoneme)
+    if phoneme == '[_w':
+        return phoneme 
+    else:
+        row = phoneme_features[phoneme_features["Phoneme"] == phoneme] # TODO: there might be orthographic differences
+        
+        if row.empty:
+            return not_in_phoible(phoneme)
+
+        if row["SegmentClass"].item() == "consonant":
+            return 'C'
+        else:
+            return phoneme
+
+def vowel_representation(phoneme):
+    '''
+    The vowel model sees a perfect representation of prior context.
+    '''
+    phoneme = phoible_ipa(phoneme)
+    return phoneme
+
+def nphone_model(wordseglist, n=4, wordlen=8):
+    '''
+    Create n-gram models for the given word list of phonemes. 
+    
+    Params: 
+     - wordseglist: a list of words, where each word is a list of a string of the IPA representation
+                    such as [["b a"], ["d o"]]
+     - n: Number of preceding segments in context
+     - wordlen: Maximum length of words to use, including the word-initial and word-final tokens
+
+    Returns:
+     - consonant_vowel: A dictionary representing the CV n-gram model. Each key is a string representing
+                        the context (perfect representation of n segments). Each value is another dictionary,
+                        where the keys are whether the next segment is consonant, vowel, or word-final token, 
+                        and the values are the counts. 
+     - consonant: A dictionary representing the consonant n-gram model. Each key is a string representing
+                        the context (imperfect representation of n segments). Each value is another dictionary,
+                        where the keys are the next consonant, and the values are the counts. 
+     - vowel: A dictionary representing the vowel n-gram model. Each key is a string representing
+                        the context (perfect representation of n segments). Each value is another dictionary,
+                        where the keys are the next vowel, and the values are the counts. 
+    '''
+    consonant_vowel = {}
+    consonant = {}
+    vowel = {}
+
+    prev_context = []
+    for word in wordseglist: # each word is a list of exactly one string, the word
+        prev_context = ['[_w'] # start of word
+
+        # don't use words that aren't perfectly translated to IPA
+        if '@' in word[0].split(" "):
+            continue 
+
+        # don't use words that aren't the same length as generated words 
+        # n - 1 because [_w is included in generated words
+        # wordlen - 2 because both [_w and ]_w are included in generated words
+        if len(word[0].split(" ")) < (n - 1) or len(word[0].split(" ")) > (wordlen - 2):
+            continue
+
+        word[0] = word[0].replace(" ː", "ː")
+        for phoneme in word[0].split(" "): 
+            if len(prev_context) == n:
+                str_context = " ".join(prev_context)
+                if consonant_vowel.get(str_context) is None:
+                    consonant_vowel[str_context] = defaultdict(int)
+                consonant_vowel[str_context][cv_representation(phoneme)] += 1
+
+                if cv_representation(phoneme) == "C":
+                    consonant_context = [consonant_representation(phon) for phon in prev_context]
+                    consonant_context = " ".join(consonant_context)
+                    if consonant.get(consonant_context) is None:
+                        consonant[consonant_context] = defaultdict(int)
+                    consonant[consonant_context][phoneme] += 1
+                else:
+                    vowel_context = [vowel_representation(phon) for phon in prev_context]
+                    vowel_context = " ".join(vowel_context)
+                    if vowel.get(vowel_context) is None:
+                        vowel[vowel_context] = defaultdict(int)
+                    vowel[vowel_context][phoneme] += 1
+            
+                prev_context.pop(0) # remove earliest segment from context
+            
+            # update context
+            prev_context.append(phoneme)
+
+        # add word-final context once you've reached the end of the word
+        if len(prev_context) >= n:
+            str_context = " ".join(prev_context)
+            if consonant_vowel.get(str_context) is None:
+                consonant_vowel[str_context] = defaultdict(int)
+            consonant_vowel[str_context][']_w'] += 1
+    return consonant_vowel, consonant, vowel
+
+def main():
+    lang_codes = []
+    for roots, dirs, files in os.walk('word_lists'):
+        for f in files: 
+            with open("word_lists/" + f, newline='') as fin:
+                lang_code = f.split("_")[0]
+                lang_codes.append([lang_code])
+                
+                print("lang_code: ", lang_code)
+                
+                reader = csv.reader(fin, delimiter='\t')
+                word_list = list(reader)
+                cv_model, c_model, v_model = nphone_model(word_list)             
+
+                with open("utf8_ngram_models/" + lang_code + "_cv_model.json", 'w', encoding='utf8') as fout:
+                    json.dump(cv_model, fout, ensure_ascii=False)
+
+                with open("utf8_ngram_models/" + lang_code + "_c_model.json", 'w', encoding='utf8') as fout:
+                    json.dump(c_model, fout, ensure_ascii=False)
+
+                with open("utf8_ngram_models/" + lang_code + "_v_model.json", 'w', encoding='utf8') as fout:
+                    json.dump(v_model, fout, ensure_ascii=False)
+
+    # a list of all language codes used in this analysis
+    with open("lang_codes.tsv", 'a+', newline='') as f:
+        write =  csv.writer(f, delimiter="\t")
+        write.writerows(lang_codes)
+
+    return None 
+
+if __name__ == "__main__": 
+    main()
+```
+
+## Generation
+Once we have the n-gram models for each language, we can generate a list of all possible words (between 3-6 segments long) for each languages, with the probability of generating each word. 
+```{python, eval = FALSE}
+from collections import Counter, defaultdict
+import pandas as pd
+import ngram_model
+import csv
+import os
+import json
+'''
+This file should calculate a set of all possible artificial words,
+up to an arbitrary length, based on the n-gram model probabilities. 
+Each artificial word should also be assigned its probability score. 
+'''
+
+phoneme_features = pd.read_csv("data/phoible_unique_phonemes.csv")
+
+# global variable
+# key is a generated word
+# value is probability of that word
+word_dict = {}
+
+def phoible_ipa(phoneme):
+    '''
+    Some of the XPF IPA doesn't match the PHOIBLE IPA. 
+    Resolving mismatches.
+    '''
+    phoible_affricates = {'tʃ': 't̠ʃ',
+    "dʒ": 'd̠ʒ',
+    "tʃʼ": 't̠ʃʼ',
+    "tʃʰ": 't̠ʃʰ'}
+
+    phoible_prenasals = {"ⁿ": "n",
+                "ᵐ": "m",
+                "ᵑ": "ŋ",
+                "ᶯ": "ɳ",
+                "ᶮ": "ɲ" }
+
+    if phoible_affricates.get(phoneme) != None:
+        return phoible_affricates[phoneme]
+    elif phoible_prenasals.get(phoneme[0]) != None:
+        return phoible_prenasals.get(phoneme[0]) + phoneme[1:]
+    else:
+        return phoneme
+
+def not_in_phoible(phoneme):
+    '''
+    If original phoneme is not in PHOIBLE, try to determine a close match. 
+    A close match is acceptable in these cases since we only want to know if it's a consonant or a vowel.
+    '''
+    if phoneme == "":
+        # if no other guess can be made, guess that it's a consonant
+        return 'C'
+
+    # PHOIBLE often has errors with phonemes that are represented with multiple IPA letters
+    # like geminated palatalized affricates
+    # so we're trying to find the nearest match by either removing the first or last part of that IPA representation
+    # which shouldn't affect recognition as either a consonant or a vowel
+    row = phoneme_features[phoneme_features["Phoneme"] == phoneme[1:]]
+    
+    if not row.empty:
+        return 'C' if row["SegmentClass"].item() == 'consonant' else 'V'
+    else:
+        row = phoneme_features[phoneme_features["Phoneme"] == phoneme[:-1]]
+        if not row.empty:
+            return 'C' if row["SegmentClass"].item() == 'consonant' else 'V'
+        else:
+            return not_in_phoible(phoneme[1:-1])
+
+def cv_representation(phoneme):
+    '''
+    Return string representation of phoneme for consonant-vowel model. 
+    '''
+    phoneme = phoible_ipa(phoneme)
+    row = phoneme_features[phoneme_features["Phoneme"] == phoneme] # TODO: there might be orthographic differences
+
+    if row.empty:
+        return not_in_phoible(phoneme)
+
+    if row["SegmentClass"].item() == "consonant":
+        return 'C'
+    else:
+        return 'V'
+
+def consonant_representation(phoneme):
+    phoneme = phoible_ipa(phoneme)
+    if phoneme == '[_w':
+        return phoneme 
+    else:
+        row = phoneme_features[phoneme_features["Phoneme"] == phoneme] # TODO: there might be orthographic differences
+        
+        if row.empty:
+            return not_in_phoible(phoneme)
+
+        if row["SegmentClass"].item() == "consonant":
+            return 'C'
+        else:
+            return phoneme
+
+def vowel_representation(phoneme):
+    phoneme = phoible_ipa(phoneme)
+    return phoneme
+
+def generate_consonant(cv_model, c_model, v_model, wordlen=8, context='', n=4, current_prob=None):
+    context = context.split(" ")
+    n_context = context[-n:]
+    n_context = [consonant_representation(phoneme) for phoneme in n_context]
+    seg_counts = c_model.get(" ".join(n_context)) # dictionary of new segments 
+    total_count = sum(seg_counts.values())
+    for seg in seg_counts.keys(): # going through all possible predicted consonants
+        new_context = " ".join(context) + " " + seg
+        prob = seg_counts[seg] / total_count
+        # continue generating the rest of this word
+        generate_lexicon(cv_model, c_model, v_model, wordlen, new_context, n, current_prob * prob)
+
+def generate_vowel(cv_model, c_model, v_model, wordlen=8, context='', n=4, current_prob=None):
+    context = context.split(" ")
+    n_context = context[-n:]
+    n_context = [vowel_representation(phoneme) for phoneme in n_context]
+    seg_counts = v_model.get(" ".join(n_context)) # dictionary of new segments 
+    total_count = sum(seg_counts.values())
+    for seg in seg_counts.keys(): # going through all possible predicted vowels
+        new_context = " ".join(context) + " " + seg
+        prob = seg_counts[seg] / total_count
+        # continue generating the rest of this word
+        generate_lexicon(cv_model, c_model, v_model, wordlen, new_context, n, current_prob * prob)
+
+def generate_lexicon(cv_model, c_model, v_model, wordlen=8, context="", n=4, current_prob=None):
+    '''
+    Generate all possible words for this set of models. 
+
+    Params: 
+     - cv_model: consonant-vowel model dictionary (see ngram_model.py)
+     - c_model: consonant model dictionary (see ngram_model.py)
+     - v_model: vowel model dictionary (see ngram_model.py)
+     - wordlen: cutoff length for generated words (including [_w and ]_w)
+     - context: string representation of entire word up to this point 
+                (not the previous n segs, but the entire word)
+     - n: length of model's prior context
+     - current_prob: the probability of generating the word (context) up till this point
+
+    Returns:
+     - Nothing, modifies global dictionary word_dict
+    '''
+    global word_dict 
+
+    if context == "": # there is no prior context, starting a new word
+        for prev_context in cv_model.keys():
+            if prev_context[0:3] == '[_w':
+                if cv_model.get(prev_context) != None:
+                    c_freq = cv_model[prev_context].get("C")
+                    if c_freq == None:
+                        c_freq = 0
+
+                    v_freq = cv_model[prev_context].get("V")
+                    if v_freq == None:
+                        v_freq = 0
+
+                    end_freq = cv_model[prev_context].get(']_w')
+                    if end_freq == None:
+                        end_freq = 0
+
+                    if c_freq != 0:
+                        generate_consonant(cv_model, c_model, v_model, wordlen, prev_context, n, c_freq / (c_freq + v_freq + end_freq))
+                    
+                    if v_freq != 0:
+                        generate_vowel(cv_model, c_model, v_model, wordlen, prev_context, n, v_freq / (c_freq + v_freq + end_freq))
+                    
+                    if end_freq != 0:
+                        word_dict[prev_context + ' ]_w'] = end_freq / (c_freq + v_freq + end_freq)
+    else:
+        context = context.split(" ")
+        if len(context) < wordlen:
+            n_context = context[-n:] # getting only previous n segments
+            n_context = " ".join(n_context)
+            context = " ".join(context)
+            if cv_model.get(n_context) != None:
+                # handling cases where a consonant, vowel, or word-final cannot appear after this context
+                c_freq = cv_model[n_context].get("C")
+                if c_freq == None:
+                    c_freq = 0
+
+                v_freq = cv_model[n_context].get("V")
+                if v_freq == None:
+                    v_freq = 0
+
+                end_freq = cv_model[n_context].get(']_w')
+                if end_freq == None:
+                    end_freq = 0
+
+                if c_freq != 0:
+                    generate_consonant(cv_model, c_model, v_model, wordlen, context, n, current_prob * (c_freq / (c_freq + v_freq + end_freq)))
+                
+                if v_freq != 0:
+                    generate_vowel(cv_model, c_model, v_model, wordlen, context, n, current_prob * (v_freq / (c_freq + v_freq + end_freq)))
+                
+                if end_freq != 0:
+                    word_dict[context + ' ]_w'] = current_prob * (end_freq / (c_freq + v_freq + end_freq))
+
+
+def main():
+    global word_dict 
+
+    lang_codes = []
+    with open("lang_codes.tsv", 'r') as fin:
+        reader = csv.reader(fin, delimiter='\t')
+        lang_codes = list(reader)
+
+    for lang_code in lang_codes: 
+        lang_code = lang_code[0]
+        print("lang code: ", lang_code)
+
+        with open("utf8_ngram_models/" + lang_code + "_cv_model.json", 'r', encoding='utf8') as fin:
+            cv_model = json.load(fin)
+        
+        with open("utf8_ngram_models/" + lang_code + "_c_model.json", 'r', encoding='utf8') as fin:
+            c_model = json.load(fin)
+
+        with open("utf8_ngram_models/" + lang_code + "_v_model.json", 'r', encoding='utf8') as fin:
+            v_model = json.load(fin)
+        
+        generate_lexicon(cv_model, c_model, v_model)
+
+        # I recognize that I probably should figure out a way to do this without messing around with global scope
+        # I will fix it later on
+
+        with open("generated_words/" + lang_code + "_generated_words.json", 'w', encoding='utf8') as fout:
+            json.dump(word_dict, fout, ensure_ascii=False)
+
+        # resetting the dictionary for the next language
+        word_dict = {}
+    return None
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Sampling baselines
+Using these generated words and probabilities, we can now create artificial baselines by sampling the generated words without replacement and with the probabilities as weights. Each time, we'll sample the same number of words as there are in the natural language's top 5000+ words that are between 3-6 (inclusive) segments long. Also, we create 100 baselines for the purpose of this class project, but would probably need to increase this number for more rigorous work.
+```{python, eval = FALSE}
+import pandas as pd 
+import os 
+import json
+import csv
+from collections import defaultdict
+
+NUM_SAMPLES = 100 # number of artificial baselines per natural language
+
+def main():
+    lang_codes = []
+    with open("lang_codes.tsv", 'r') as fin:
+        reader = csv.reader(fin, delimiter='\t')
+        print()
+        lang_codes = list(reader)
+    
+    for lang_code in lang_codes:
+        lang_code = lang_code[0]
+        print("lang_code: ", lang_code)
+
+        # Get 5000 most frequent words from natural language, plus all the words at the same final frequency
+        # the natural lexicon is already the 5000 most frequent along with the extra words at the last frequency
+        natural_lexicon = []
+        with open("word_lists/" + lang_code + '_word_list.tsv', 'r', encoding='utf8') as fin:
+            reader = csv.reader(fin, delimiter='\t')
+            natural_lexicon = list(reader)
+
+        # getting only words that match generated words in length (3-6 segments)
+        # we're gonna generate artificial baselines that have as many words as this filtered lexicon
+        filtered_lexicon = list(filter(lambda x: 3 <= len(x[0].split(" ")) <= 6, natural_lexicon))
+
+        all_words = {}
+        with open("generated_words/" + lang_code + "_generated_words.json", 'r', encoding='utf8') as fin:
+            all_words = json.load(fin)
+
+        # df = pd.DataFrame.from_records(all_words, index=list(range(len(all_words.keys()))))
+        df = pd.DataFrame({'word': list(all_words.keys()), 
+                           'prob': list(all_words.values())})
+
+        for i in range(1, NUM_SAMPLES + 1):
+            baseline = df["word"].sample(min(len(filtered_lexicon), len(df)), replace=False, weights=df["prob"]).tolist()
+
+            if not os.path.exists('artificial_baselines'):
+                os.makedirs('artificial_baselines')
+            
+            if not os.path.exists('artificial_baselines/' + lang_code):
+                os.makedirs('artificial_baselines/' + lang_code)
+            
+            with open('artificial_baselines/' + lang_code + "/" + lang_code + "_baseline_" + str(i) + ".tsv", 'a+', encoding='utf8', newline='') as fout:
+                write =  csv.writer(fout, delimiter="\t")
+                for word in baseline:
+                    write.writerow([word])
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Count violations
+Great, now we have both the natural languages and our baselines. Now we're just going to find the percent of OCP violations (for each of our hypotheses) in the natural languages and the artificial languages. 
+```{python, eval = FALSE}
+import csv
+import os
+import pandas as pd
+import functools
+
+phoneme_features = pd.read_csv("data/phoible_unique_phonemes.csv")
+
+continuants = phoneme_features[phoneme_features['continuant'] == "+"]
+phoible_sibilants = set(continuants[continuants["strident"] == '+']["Phoneme"])
+phoible_fricatives = set(continuants[continuants['approximant'] != '+']["Phoneme"])
+
+def phoible_ipa(phoneme):    
+    '''
+    Some of the XPF IPA doesn't match the PHOIBLE IPA. 
+    Resolving mismatches.
+    '''
+    phoible_affricates = {'tʃ': 't̠ʃ',
+    "dʒ": 'd̠ʒ',
+    "tʃʼ": 't̠ʃʼ',
+    "tʃʰ": 't̠ʃʰ'}
+
+    phoible_prenasals = {"ⁿ": "n",
+                "ᵐ": "m",
+                "ᵑ": "ŋ",
+                "ᶯ": "ɳ",
+                "ᶮ": "ɲ" }
+
+    if phoible_affricates.get(phoneme) != None:
+        return phoible_affricates[phoneme]
+    elif phoible_prenasals.get(phoneme[0]) != None:
+        return phoible_prenasals.get(phoneme[0]) + phoneme[1:]
+    else:
+        return phoneme
+
+def is_fricative(phoneme):
+    phoneme = phoible_ipa(phoneme)
+    return int(phoneme in phoible_fricatives)
+
+def is_sibilant(phoneme):
+    phoneme = phoible_ipa(phoneme)
+    return int(phoneme in phoible_sibilants)
+
+def same_fricatives(word):
+    '''
+    Parameters:
+     - word: A list of a single string of the phonemic form of a word, where phonemes
+      are separated by spaces. For example, ['[_w t i p ]_w']
+
+    Returns a Boolean indicating if there are multiple of the same fricative in the word. 
+    '''
+    fricatives = []
+    for phoneme in word.split(" "):
+        if is_fricative(phoneme):
+            if phoneme in fricatives:
+                return 1
+            else:
+                fricatives.append(phoneme)
+    return 0
+
+def multiple_fricatives(word):
+    '''
+    Parameters:
+     - word: A string of the phonemic form of a word, where phonemes are separated by spaces. For example, '[_w t i p ]_w'
+
+    Returns a Boolean indicating if there are multiple fricatives in the word. 
+    '''
+    fricatives = []
+    for phoneme in word.split(" "):
+        if is_fricative(phoneme):
+            fricatives.append(phoneme)
+            if len(fricatives) >= 2:
+                return 1
+    return 0
+
+def same_sibilants(word):
+    '''
+    Parameters:
+     - word: A string of the phonemic form of a word, where phonemes are separated by spaces. For example, '[_w t i p ]_w'
+
+    Returns a Boolean indicating if there are multiple of the same sibilant in the word. 
+    '''
+    sibilants = []
+    for phoneme in word.split(" "):
+        if is_sibilant(phoneme):
+            if phoneme in sibilants:
+                return 1
+            else:
+                sibilants.append(phoneme)
+    return 0
+
+def multiple_sibilants(word):
+    '''
+    Parameters:
+     - word: A string of the phonemic form of a word, where phonemes are separated by spaces. For example, '[_w t i p ]_w'
+
+    Returns a Boolean indicating if there are multiple sibilants in the word. 
+    '''
+    sibilants = []
+    for phoneme in word.split(" "):
+        if is_sibilant(phoneme):
+            sibilants.append(phoneme)
+            if len(sibilants) >= 2:
+                return 1
+    return 0
+
+def main():
+    lang_codes = []
+    with open("lang_codes.tsv", 'r') as fin:
+        reader = csv.reader(fin, delimiter='\t')
+        lang_codes = list(reader)
+
+    for lang_code in lang_codes: 
+        lang_code = lang_code[0]
+        print("lang code: ", lang_code)
+
+        for roots, dirs, files in os.walk('artificial_baselines/' + lang_code):
+            same_fricatives_lst = []
+            multiple_fricatives_lst = []
+            same_sibilants_lst = []
+            multiple_sibilants_lst = []
+            for f in files:
+                baseline = [] # the list of words in this artificial baseline
+                with open('artificial_baselines/' + lang_code + '/' + f, 'r', encoding='utf8') as fin:
+                    reader = csv.reader(fin, delimiter='\t')
+                    baseline = list(reader)
+                baseline = list(map(lambda x: x[0], baseline))
+                baseline_len = len(baseline)
+                                
+                # Percent of OCP violations
+                same_fricatives_lst.append(sum(map(same_fricatives, baseline)) / baseline_len)
+                multiple_fricatives_lst.append(sum(map(multiple_fricatives, baseline)) / baseline_len)
+                same_sibilants_lst.append(sum(map(same_sibilants, baseline)) / baseline_len)
+                multiple_sibilants_lst.append(sum(map(multiple_sibilants, baseline)) / baseline_len)
+            
+            with open('distributions/' + lang_code + '_artificial.csv', 'w') as fout:
+                write = csv.writer(fout)
+                write.writerow(['multiple_same_fricatives', 'multiple_fricatives', 'multiple_same_sibilants', 'multiple_sibilants'])
+                for i in range(len(same_fricatives_lst)):
+                    write.writerow([same_fricatives_lst[i], multiple_fricatives_lst[i], same_sibilants_lst[i], multiple_sibilants_lst[i]])        
+
+        natural_lexicon = []
+        with open('word_lists/' + lang_code + '_word_list.tsv', 'r', encoding='utf8') as fin:
+            reader = csv.reader(fin, delimiter='\t')
+            natural_lexicon = list(reader)
+        natural_lexicon = list(map(lambda x: x[0], natural_lexicon))
+        filtered_lexicon = list(filter(lambda x: 3 <= len(x.split(" ")) <= 6, natural_lexicon))
+        filtered_lexicon_len = len(filtered_lexicon)
+
+        same_fricatives_val = sum(map(same_fricatives, filtered_lexicon)) / filtered_lexicon_len
+        multiple_fricatives_val = sum(map(multiple_fricatives, filtered_lexicon)) / filtered_lexicon_len
+        same_sibilants_val = sum(map(same_sibilants, filtered_lexicon)) / filtered_lexicon_len 
+        multiple_sibilants_val = sum(map(multiple_sibilants, filtered_lexicon)) / filtered_lexicon_len
+
+        with open('distributions/' + lang_code + '_natural.csv', 'w') as fout:
+            write = csv.writer(fout)
+            write.writerow(['multiple_same_fricatives', 'multiple_fricatives', 'multiple_same_sibilants', 'multiple_sibilants'])
+            write.writerow([same_fricatives_val, multiple_fricatives_val, same_sibilants_val, multiple_sibilants_val])        
+
+    return None
+
+if __name__ == "__main__":
+    main()
+```
+
+# Plots
+
+Finally, let's look at some plots. The following code is just some setup for creating the plots, and then I'll speak more specifically about each group of plots later on.
+```{r}
+lang_codes <- read.csv("lang_codes.tsv", sep='\t', header=F)
+colnames(lang_codes) <- c("code")
+head(lang_codes)
+
+# vectors of percentiles
+multiple_fricatives <- c()
+multiple_same_fricatives <- c()
+multiple_sibilants <- c()
+multiple_same_sibilants <- c()
+
+# lists of plots 
+multiple_fricatives_plots <- list()
+multiple_same_fricatives_plots <- list()
+multiple_sibilants_plots <- list()
+multiple_same_sibilants_plots <- list()
+
+# For each lang code, get artificial distribution and natural value
+# for (code in lang_codes$code) {
+for (i in c(1:60)) {
+  code <- lang_codes$code[i]
+  artificial <- read.csv(paste("distributions/", code, "_artificial.csv", sep=""))
+  # multiplication by 100 is so that it's in terms of percent (5% instead of 0.05)
+  artificial <- artificial %>% 
+    mutate(multiple_same_fricatives = multiple_same_fricatives * 100, 
+           multiple_fricatives = multiple_fricatives * 100,
+           multiple_sibilants = multiple_sibilants * 100,
+           multiple_same_sibilants = multiple_same_sibilants * 100)
+  natural <- read.csv(paste("distributions/", code, "_natural.csv", sep=""))
+  natural <- natural %>% 
+    mutate(multiple_same_fricatives = multiple_same_fricatives * 100, 
+           multiple_fricatives = multiple_fricatives * 100,
+           multiple_sibilants = multiple_sibilants * 100,
+           multiple_same_sibilants = multiple_same_sibilants * 100)
+  
+  # Multiple of the same fricative
+  same_fricatives_plot <- ggplot(data.frame(x=artificial$multiple_same_fricatives), aes(x, color="red")) +
+    geom_density(aes(y=..scaled..)) + 
+    theme_minimal() + 
+    theme(legend.position = "none") + 
+    xlab("Violations (%)") +
+    ylab("Density") + 
+    ggtitle(paste(code, "same fricatives")) +
+    geom_vline(xintercept=natural$multiple_same_fricatives)
+  multiple_same_fricatives_percentile <- ecdf(artificial$multiple_same_fricatives)(natural$multiple_same_fricatives)
+  multiple_same_fricatives <- append(multiple_fricatives, multiple_same_fricatives_percentile)
+  multiple_same_fricatives_plots[[i]] = same_fricatives_plot
+  
+  # Multiple fricatives
+  fricatives_plot <- ggplot(data.frame(x=artificial$multiple_fricatives), aes(x, color="red")) +
+    geom_density(aes(y=..scaled..)) + 
+    theme_minimal() + 
+    theme(legend.position = "none") + 
+    xlab("Violations (%)") +
+    ylab("Density") + 
+    ggtitle(paste(code, "fricatives")) +
+    geom_vline(xintercept=natural$multiple_fricatives)
+  multiple_fricatives_percentile <- ecdf(artificial$multiple_fricatives)(natural$multiple_fricatives)
+  multiple_fricatives <- append(multiple_fricatives, multiple_fricatives_percentile)
+  multiple_fricatives_plots[[i]] = fricatives_plot
+  
+  # Multiple of the same sibilant 
+  same_sibilants_plot <- ggplot(data.frame(x=artificial$multiple_same_sibilants), aes(x, color='red')) +
+    geom_density(aes(y=..scaled..)) + 
+    theme_minimal() + 
+    theme(legend.position = "none") +
+    xlab("Violations (%)") +
+    ylab("Density") + 
+    ggtitle(paste(code, "same sibilants")) +
+    geom_vline(xintercept=natural$multiple_same_sibilants)
+  multiple_same_sibilants_percentile <- ecdf(artificial$multiple_same_sibilants)(natural$multiple_same_sibilants)
+  multiple_same_sibilants <- append(multiple_same_sibilants, multiple_same_sibilants_percentile)
+  multiple_same_sibilants_plots[[i]] = same_sibilants_plot
+  
+  # Multiple sibilants
+  sibilants_plot <- ggplot(data.frame(x=artificial$multiple_sibilants), aes(x, color='red')) +
+    geom_density(aes(y=..scaled..)) + 
+    theme_minimal() + 
+    theme(legend.position = "none") + 
+    xlab("Violations (%)") +
+    ylab("Density") + 
+    ggtitle(paste(code, "sibilants")) +
+    geom_vline(xintercept=natural$multiple_sibilants)
+  multiple_sibilants_percentile <- ecdf(artificial$multiple_sibilants)(natural$multiple_sibilants)
+  multiple_sibilants <- append(multiple_sibilants, multiple_sibilants_percentile)
+  multiple_sibilants_plots[[i]] = sibilants_plot
+}
+percentiles <- data.frame(lang_codes, multiple_fricatives, multiple_same_fricatives, multiple_sibilants, multiple_same_sibilants)
+```
+
+## Individual language plots
+### Multiple fricatives
+The following plots are specifically for investigating the co-occurrence of multiple fricatives. Each plot is a scaled density plot of the artificial distribution of percent of violations. The red line represents the artificial distribution and the vertical black line is the natural language's percent of violations. The first word in the title of each plot is the BCP-47 language code. As you can see, there's a lot of variation in what the artificial distributions look like and where the natural language lies relative to the baseline. 
+```{r out.width="200%", fig.height=30}
+gridExtra::grid.arrange(grobs=multiple_fricatives_plots, ncol=3)
+```
+
+### Multiple identical fricatives
+The following plots are specifically for investigating the co-occurrence of multiple identical fricatives. Each plot is a scaled density plot of the artificial distribution of percent of violations. The red line represents the artificial distribution and the vertical black line is the natural language's percent of violations. The first word in the title of each plot is the BCP-47 language code. As you can see, there's a lot of variation in what the artificial distributions look like and where the natural language lies relative to the baseline. 
+```{r out.width="200%", fig.height=30}
+gridExtra::grid.arrange(grobs=multiple_same_fricatives_plots, ncol=3)
+```
+
+### Multiple sibilants
+The following plots are specifically for investigating the co-occurrence of multiple sibilants. Each plot is a scaled density plot of the artificial distribution of percent of violations. The red line represents the artificial distribution and the vertical black line is the natural language's percent of violations. The first word in the title of each plot is the BCP-47 language code. As you can see, there's a lot of variation in what the artificial distributions look like and where the natural language lies relative to the baseline. 
+```{r out.width="200%", fig.height=30}
+gridExtra::grid.arrange(grobs=multiple_sibilants_plots, ncol=3)
+```
+
+### Multiple identical sibilants
+The following plots are specifically for investigating the co-occurrence of multiple identical sibilants. Each plot is a scaled density plot of the artificial distribution of percent of violations. The red line represents the artificial distribution and the vertical black line is the natural language's percent of violations. The first word in the title of each plot is the BCP-47 language code. As you can see, there's a lot of variation in what the artificial distributions look like and where the natural language lies relative to the baseline. 
+```{r out.width="200%", fig.height=30}
+gridExtra::grid.arrange(grobs=multiple_same_sibilants_plots, ncol=3)
+```
+
+## Density plots for all languages
+It looks like there's a lot of variation in how the individual languages behave. Earlier in the code we calculated each natural language's percentile when compared to the distribution of baseline percent of OCP violations. Now, we'll just do a scaled density plot of all the languages' percentiles. 
+
+### Multiple fricatives
+This is a scaled density plot of the natural languages' percentiles of multiple fricative co-occurrences, when compared to their baseline distribution. It looks pretty bimodal -- languages are either severely under-representing these co-occurrences or severely over-representing them.
+```{r}
+ggplot(data.frame(x=percentiles$multiple_fricatives), aes(x, fill="red")) + 
+  geom_density(aes(y=..scaled..)) + 
+  theme_minimal() + 
+  theme(legend.position = "none") + 
+  ggtitle("Distribution of fricative co-occurrence percentiles") + 
+  xlab("Percentile of natural language percent of violations compared to generated distribution") + 
+  ylab("Density")
+```
+### Multiple identical fricatives 
+This is a scaled density plot of the natural languages' percentiles of multiple identical fricative co-occurrences, when compared to their baseline distribution. It looks pretty bimodal -- languages are either severely under-representing these co-occurrences or severely over-representing them.
+```{r}
+ggplot(data.frame(x=percentiles$multiple_same_fricatives), aes(x, fill="red")) + 
+  geom_density(aes(y=..scaled..)) + 
+  theme_minimal() + 
+  theme(legend.position = "none") + 
+  ggtitle("Distribution of identical fricative co-occurrence percentiles") + 
+  xlab("Percentile of natural language percent of violations compared to generated distribution") + 
+  ylab("Density")
+```
+### Multiple sibilants
+This is a scaled density plot of the natural languages' percentiles of multiple sibilant co-occurrences, when compared to their baseline distribution. It looks pretty bimodal -- languages are either severely under-representing these co-occurrences or severely over-representing them.
+```{r}
+ggplot(data.frame(x=percentiles$multiple_sibilants), aes(x, fill="red")) + 
+  geom_density(aes(y=..scaled..)) + 
+  theme_minimal() + 
+  theme(legend.position = "none") + 
+  ggtitle("Distribution of sibilant co-occurrence percentiles") + 
+  xlab("Percentile of natural language percent of violations compared to generated distribution") + 
+  ylab("Density")
+```
+### Multiple identical sibilants
+This is a scaled density plot of the natural languages' percentiles of multiple identical sibilant co-occurrences, when compared to their baseline distribution. It looks pretty bimodal -- languages are either severely under-representing these co-occurrences or severely over-representing them.
+```{r}
+ggplot(data.frame(x=percentiles$multiple_same_sibilants), aes(x, fill="red")) + 
+  geom_density(aes(y=..scaled..)) + 
+  theme_minimal() + 
+  theme(legend.position = "none") + 
+  ggtitle("Distribution of identical sibilant co-occurrence percentiles") + 
+  xlab("Percentile of natural language percent of violations compared to generated distribution") + 
+  ylab("Density")
+```
+
+A full discussion of these plots and results can be found in the paper. If you'd like to see the exact percentiles for each language and each type of co-occurrence, it's printed below. 
+```{r}
+percentiles
+```
+
+# Sanity check 
+This is an addendum, and not part of the main analysis. The results were quite unexpected, which could mean that the model itself is wrong. One basic check we can do is making sure that the uniphone frequencies of the natural language's lexicon match the generated words' uniphone frequencies. Here's a Python script that gets the phoneme frequencies for both the natural languages and the generated words. 
+```{python, eval=FALSE}
+import pandas as pd 
+import os 
+from collections import defaultdict
+import csv
+import json 
+
+def main():
+    lang_codes = []
+    with open("lang_codes.tsv", 'r') as fin:
+        reader = csv.reader(fin, delimiter='\t')
+        lang_codes = list(reader)
+
+    for lang_code in lang_codes: 
+        lang_code = lang_code[0]
+        print("lang code: ", lang_code)
+
+        # read in natural word list 
+        natural_words = []
+        with open('word_lists/' + lang_code + '_word_list.tsv', 'r', encoding='utf8', newline='') as fin:
+            reader = csv.reader(fin, delimiter='\t')
+            natural_words = list(reader)
+        filtered_lexicon = list(filter(lambda x: 3 <= len(x[0].split(" ")) <= 6, natural_words))
+        filtered_lexicon = list(filter(lambda x: not ('@' in x[0].split(" ")), filtered_lexicon))
+
+        natural_phoneme_count = defaultdict(int)
+        for wd in filtered_lexicon:
+            for phon in wd[0].split(" "):
+                natural_phoneme_count[phon] += 1
+
+        total_natural_phons = sum(natural_phoneme_count.values())
+        natural_phoneme_freq = {}
+        for k, v in natural_phoneme_count.items():
+            natural_phoneme_freq[k] = v / total_natural_phons
+
+        # read in generated words 
+        generated_words = {}
+        with open('generated_words/' + lang_code + '_generated_words.json', 'r', encoding='utf8') as fin:
+            generated_words = json.load(fin)
+
+        generated_words = generated_words.keys() 
+        generated_phoneme_count = defaultdict(int)
+        for wd in generated_words:
+            for phon in wd.split(" "):
+                if not phon in ['[_w', ']_w']:
+                    generated_phoneme_count[phon] += 1
+
+        total_generated_phons = sum(generated_phoneme_count.values())
+        generated_phoneme_freq = {}
+        for k, v in generated_phoneme_count.items():
+            generated_phoneme_freq[k] = v / total_generated_phons
+
+        with open('phoneme_frequencies/' + lang_code + '_generated_frequencies.json', 'w', encoding='utf8') as fout:
+            json.dump(generated_phoneme_freq, fout, ensure_ascii=False)
+
+        with open('phoneme_frequencies/' + lang_code + '_natural_frequencies.json', 'w', encoding='utf8') as fout:
+            json.dump(natural_phoneme_freq, fout, ensure_ascii=False)
+    return None 
+
+if __name__ == "__main__":
+    main()
+```
+
+The following Python script creates some scatterplots of the log-frequencies of phonemes, with the generated log-frequencies on the x-axis and the natural log-frequencies on the y-axis. Since it's in Python, I'm not actually executing the script, but I inserted the image output at the end. This isn't a very rigorous check, but all the plots are straight diagonal lines, meaning the phoneme frequencies of both the natural and generated lexicons line up quite nicely.
+
+```{r}
+knitr::include_graphics("frequency_plots/all_subplots.png")
+```
+
+Future sanity checks would involve investigating the bi-phone transition probabilities between the natural and generated lexicons, and testing out the n-gram models on a very small lexicon and seeing what it does. 
