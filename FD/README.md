@@ -54,29 +54,29 @@ List of project files/dependencies
     * gets counts of all phonemes in all positions in the natural and in the generated lexicon
     * outputs are saved to phoneme_frequencies directory
 
-7. compare_phoneme_frequences_initial.py
-    * written by Rebecca Mathew
-    * modified for final devoicing by Daniela Wiepert
-    * outputs are saved to phoneme_frequencies directory
-
-8. compare_phoneme_frequencies_final.py
-    * written by Rebecca Mathew
-    * modified for final devoicing by Daniela Wiepert
-    * outputs are saved to phoneme_frequencies directory
-
-9. filter_langs.py
-    * written by Daniela Wiepert
-    * outputs a tsv file (filtered_codes.tsv) containing language codes for all the languages that make it through filtering
-
-10. plot_phoneme_frequencies.py
-    * written by Rebecca Mathew
-    * adapted for final devoicing by Daniela Wiepert
-    * outputs plots of phoneme frequencies per language
-
-11. count_fd_violations.py 
+7. count_fd_violations.py 
     * written by Rebecca Mathew
     * modified for final devoicing by Daniela Wiepert
     * outputs saved to distribution directory
+
+8. compare_phoneme_frequences_initial.py
+    * written by Rebecca Mathew
+    * modified for final devoicing by Daniela Wiepert
+    * outputs are saved to phoneme_frequencies directory
+
+9. compare_phoneme_frequencies_final.py
+    * written by Rebecca Mathew
+    * modified for final devoicing by Daniela Wiepert
+    * outputs are saved to phoneme_frequencies directory
+
+10. filter_langs.py
+    * written by Daniela Wiepert
+    * outputs a tsv file (filtered_codes.tsv) containing language codes for all the languages that make it through filtering
+
+11. plot_phoneme_frequencies.py
+    * written by Rebecca Mathew
+    * adapted for final devoicing by Daniela Wiepert
+    * outputs plots of phoneme frequencies per language
 
 12. visualize.Rmd
     * written by Rebecca Mathew

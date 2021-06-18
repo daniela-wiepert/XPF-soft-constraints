@@ -42,7 +42,12 @@ def main():
         # getting only words that match generated words in length (3-8 segments)
         # we're gonna generate artificial baselines that have as many words as this filtered lexicon
         filtered_lexicon = list(filter(lambda x: 3 <= len(x.split(" ")) <= 8, natural_lexicon))
-
+        # max = 0
+        # for f in filtered_lexicon:
+        #     f2 = filtered_lexicon.split(" ")
+        #     if len(f2) > max: 
+        #         print(f2)
+        #         max = len(f2)
         all_words = {}
         with open("./Data/generated_words/" + lang + "_generated_words.json", 'r', encoding='utf8') as fin:
             all_words = json.load(fin)

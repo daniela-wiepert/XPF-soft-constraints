@@ -7,12 +7,7 @@ phoneme_features = pd.read_csv("Data/resolved-phoible.csv")
 
 obstruents = phoneme_features[phoneme_features['sonorant'] == "-"]
 phoible_voiced = set(obstruents[obstruents['periodicGlottalSource'] == '+']["Phoneme"])
-phoible_voiceless = set(obstruents[obstruents['periodicGlottalSource'] == '-']["Phoneme"])
-phoible_obstruents = set(obstruents[:]["Phoneme"])
 #OR approximant != '+'?? for fricatives?
-
-def is_obstruent(phoneme):
-    return int(phoneme in phoible_obstruents)
 
 def is_voiced(phoneme):
     return int(phoneme in phoible_voiced)
@@ -30,7 +25,7 @@ def voiced_final(word):
     phon = word[-1]
     if word[-1] == "]_w":
         phon = word[-2]
-    if is_obstruent(phon) and is_voiced(phon):
+    if is_voiced(phon):
         return 1
     return 0
 
@@ -41,7 +36,7 @@ def main():
     word_lists = []
     identity = '5000_3'
 
-    with open("Data/filtered_codes"+identity+".tsv", 'r') as fin:
+    with open("Data/lang_codes"+identity+".tsv", 'r') as fin:
         reader = csv.reader(fin, delimiter='\t')
         lang_codes = list(reader)
 
@@ -64,9 +59,19 @@ def main():
         else: 
             split_list[lang_code].append(word_lists[i][1])
     
+    progress = '['
+    for i in range(len(lang_codes)):
+        progress = progress + '-'
+    progress = progress + ']'
+    progress1 = '[|'
+    progress = progress[1:]
+        
     for lang_code in lang_codes:
         lang_code = ''.join(lang_code)
         print("lang code: ", lang_code)
+        print(progress1 + progress)
+        progress1 =  progress1 +'|'
+        progress = progress[1:]
 
         for roots, dirs, files in os.walk('Data/artificial_baselines/' + lang_code):
             final_voiced_lst = []

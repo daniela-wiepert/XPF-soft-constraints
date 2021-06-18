@@ -23,6 +23,7 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ```{r read}
 lang_codes <- read.csv("Data/filtered_codes5000_3.tsv", sep='\t', header=F)
+
 colnames(lang_codes) <- c("a","b","c")
 lang_codes <- unite(lang_codes,"code",'a','b','c',sep='')
 head(lang_codes)
@@ -31,13 +32,11 @@ lang_codes <- lang_codes %>%
 
 # vectors of percentiles
 final_voiced_obstruents <- c()
-final_voiceless_obstruents <- c()
-final_obstruents <- c()
 
 # vectors of plots 
 final_voiced_obstruents_plots <- list()
-final_voiceless_obstruents_plots <- list()
-final_obstruents_plots <- list()
+
+
 ```
 
 
@@ -54,19 +53,17 @@ for (i in c(1:nrow(lang_codes))) {
 
 print(lang_codes[1])
 
-
+l <- 0
 for (i in c(1:nrow(lang_codes))) {
   
   code <- lang_codes$code[i]
   artificial <- read.csv(paste("Data/distributions/", code, "_artificial.csv", sep=""))
   artificial <- artificial*100
-
   natural <- read.csv(paste("Data/distributions/", code, "_natural.csv", sep=""))
   natural <- natural *100
   # multiplication by 100 is so that it's in terms of percent (5% instead of 0.05)
   
   # final voiced obstruents
-  
   final_voiced_obstruents_plot <- ggplot(data.frame(x=artificial$final_voiced_obstruents), aes(x, color="red",fill="red",alpha=.5)) +
     geom_density(aes(y=..scaled..)) + 
     theme_minimal() + 
@@ -75,21 +72,15 @@ for (i in c(1:nrow(lang_codes))) {
     ylab("Density") + 
     ggtitle(paste(code, "final voiced obstruents")) +
     geom_vline(xintercept=natural$final_voiced_obstruents)
-  # ggsave(same_fricatives_plot, file=paste("visualizations/", code, "_same_fricatives.pdf", sep=""), height=4, width=8)
+    
   final_voiced_obstruents_percentile <- ecdf(artificial$final_voiced_obstruents)(natural$final_voiced_obstruents)
   final_voiced_obstruents <- append(final_voiced_obstruents, final_voiced_obstruents_percentile)
-  final_voiced_obstruents_plots[[i]] = final_voiced_obstruents_plot
+  final_voiced_obstruents_plots[i] = final_voiced_obstruents_plot
+ 
   
 }
 
-save(final_voiced_obstruents_plots,file = "fvo_plots.Rdata")
-```
-
-```{r reg-plots}
-ggsave(file="Data/plots/final_voiced-filtered.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[1:16], labels=lang_codes$code), width=12, height=8)
-ggsave(file="Data/plots/final_voiced_2-filtered.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[17:32], labels=lang_codes$code), width=12, height=8)
-ggsave(file="Data/plots/final_voiced_3-filtered.pdf", gridExtra::arrangeGrob(grobs=final_voiced_obstruents_plots[33:45], labels=lang_codes$code), width=12, height=8)
-
+save(final_voiced_obstruents_plots,file = "Data/plots/fvo_plots.Rdata")
 ```
 
 ```{r den-plots}
@@ -103,7 +94,7 @@ final_voiced_percentile_density <- ggplot(data.frame(x=percentiles$final_voiced_
   ggtitle("Distribution of final voiced obstruent percentiles") + 
   xlab("Percentile of natural language percent of violations compared to generated distribution") + 
   ylab("Density")
-ggsave(final_voiced_percentile_density, file="Data/plots/final_voiced_percentile_density-filtered.pdf", height=4, width=8)
+
 
 save(final_voiced_percentile_density, file = "Data/plots/final_voiced_percentile_density.Rdata")
 
