@@ -1,6 +1,6 @@
-Investigating constraint universality using large cross­linguistic corpora
+# Investigating constraint universality using large cross­linguistic corpora
 
-Abstract
+# Abstract
 How can we tell whether human language is subject to a particular phonetic or
 cognitive bias? We build on Frisch et al. (2004) and the new XPF Corpus and
 show that phonetic and cognitive biases should manifest in cross­linguistic
@@ -14,7 +14,7 @@ Keywords: soft constraints, lexicons, phonetic biases, corpora, XPF Corpus,
 final devoicing, man­ner harmony
 
 
-Authors:
+# Authors:
 
 Daniela Wiepert, Brown University [dænjɛlә wipәɹt]
 Rebecca Mathew, Brown University [ɹәbɛkә mæθju]
@@ -22,14 +22,14 @@ Uriel Cohen Priva*, Brown University [uʁ̞iel kohen pʁ̞iva]
 *Corresponding author
 
 
-Word Counts:
+# Word Counts:
 
 Main Text: ~6700
 
 Full Text: ~8600
 
 
-Author contributions
+# Author contributions
 
 DW: Designed and performed Study 1, wrote and adapted code, and wrote paper;
 
@@ -38,7 +38,7 @@ RM: designed and performed Study 2, wrote code, and wrote paper;
 UCP: Designed both studies and wrote paper
 
 
-Files:
+# Files:
 
 FD folder - contains all code and data for Study 1
 
