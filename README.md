@@ -2,8 +2,8 @@
 
 # Abstract
 How can we tell whether human language is subject to a particular phonetic or
-cognitive bias? We build on Frisch et al. (2004) and the new XPF Corpus and
-show that phonetic and cognitive biases should manifest in cross­linguistic
+cognitive bias? We build on previous studies and the new XPF Corpus and
+show that phonetic and cognitive biases should manifest in cross­-linguistic
 examination of lexicons of unrelated lan­guages. In two corpus studies we show that
 final­ devoicing, a strong and well established bias, manifests as a soft constraint
 in the lexicons of most languages, and that fricative manner harmony manifests
@@ -17,8 +17,11 @@ final devoicing, man­ner harmony
 # Authors:
 
 Daniela Wiepert, Brown University [dænjɛlә wipәɹt]
+daniela_wiepert@alumni.brown.edu
 Rebecca Mathew, Brown University [ɹәbɛkә mæθju]
+rebecca_mathew@brown.edu
 Uriel Cohen Priva*, Brown University [uʁ̞iel kohen pʁ̞iva]
+uriel_cohen_priva@brown.edu
 *Corresponding author
 
 
