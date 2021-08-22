@@ -30,6 +30,7 @@ def change_to_feat(phoneme, previous):
     '''
     global to_feat
     global phon_model
+
     # create and add feature representation to to_feat dictionary if not already in it
     if to_feat.get(phoneme) is None:
         row = phoneme_features[phoneme_features["Phoneme"] == phoneme]

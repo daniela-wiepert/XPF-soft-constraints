@@ -93,8 +93,9 @@ def main():
     global word_dict 
     global total_initial_context_count
 
+    ### if testing sample lexicons
     lang_codes = []
-    with open("lang_codes.tsv", 'r') as fin:
+    with open('sample_lang_codes.tsv', 'r') as fin:
         reader = csv.reader(fin, delimiter='\t')
         lang_codes = list(reader)
 
@@ -102,7 +103,7 @@ def main():
         lang_code = lang_code[0]
         print("lang code: ", lang_code)
 
-        with open("utf8_ngram_models/" + lang_code + "_model.json", 'r', encoding='utf8') as fin:
+        with open("sample_utf8_ngram_models/" + lang_code + "_model.json", 'r', encoding='utf8') as fin:
             model = json.load(fin)
         
         for k, v in model.items():
@@ -114,12 +115,42 @@ def main():
         # convert the log probabilities back to normal probabilities
         exp_log_prob()
 
-        with open("generated_words/" + lang_code + "_generated_words.json", 'w', encoding='utf8') as fout:
+        with open("sample_generated_words/" + lang_code + "_generated_words.json", 'w', encoding='utf8') as fout:
             json.dump(word_dict, fout, ensure_ascii=False)
 
         # resetting the dictionary for the next language
         word_dict = {}
         total_initial_context_count = 0
+
+    ###
+
+    # lang_codes = []
+    # with open("lang_codes.tsv", 'r') as fin:
+    #     reader = csv.reader(fin, delimiter='\t')
+    #     lang_codes = list(reader)
+
+    # for lang_code in lang_codes: 
+    #     lang_code = lang_code[0]
+    #     print("lang code: ", lang_code)
+
+    #     with open("utf8_ngram_models/" + lang_code + "_model.json", 'r', encoding='utf8') as fin:
+    #         model = json.load(fin)
+        
+    #     for k, v in model.items():
+    #             if k[:3] == "[_w":
+    #                 total_initial_context_count += sum(v.values())
+
+    #     # populate word_dict with log probability of a word appearing in this language
+    #     generate_lexicon(model)
+    #     # convert the log probabilities back to normal probabilities
+    #     exp_log_prob()
+
+    #     with open("generated_words/" + lang_code + "_generated_words.json", 'w', encoding='utf8') as fout:
+    #         json.dump(word_dict, fout, ensure_ascii=False)
+
+    #     # resetting the dictionary for the next language
+    #     word_dict = {}
+    #     total_initial_context_count = 0
         
     return None
 

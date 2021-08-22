@@ -189,11 +189,13 @@ def generate_lexicon(model, wordlen=8, context="", n=4, current_prob=None):
                     prob = initial_context_prob(model, prev_context)
                     func_context = prev_context
                     generate_phoneme(model, wordlen,func_context,n,prob)
+                    break
     else:
         if context[-3:] == "]_w":
-            poss_contexts, poss_probs = reconstruct_con(context[:-4])
-            for i in range(len(poss_contexts)):
-                word_dict['[_w ' + poss_contexts[i] + ' ]_w'] = current_prob + poss_probs[i]
+            # poss_contexts, poss_probs = reconstruct_con(context[:-4])
+            # for i in range(len(poss_contexts)):
+            #     word_dict['[_w ' + poss_contexts[i] + ' ]_w'] = current_prob + poss_probs[i]
+            pass
 
         else:
             context = context.split(" ")
@@ -201,8 +203,10 @@ def generate_lexicon(model, wordlen=8, context="", n=4, current_prob=None):
                 n_context = context[-n:] # getting only previous n segments
                 n_context = " ".join(n_context)
                 context = " ".join(context)
+                print("n_context: ", n_context)
 
                 if model.get(n_context) != None:
+                    print("ASDFASDFASDFASDF")
                     generate_phoneme(model, wordlen, context, n, current_prob)
                                 
 
@@ -251,6 +255,7 @@ def main():
         word_dict = {}
         to_feat = {}
         phon_model = {}
+        break
 
 
     return None

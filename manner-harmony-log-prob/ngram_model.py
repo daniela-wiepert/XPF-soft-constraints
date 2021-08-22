@@ -113,9 +113,11 @@ def nphone_model(wordseglist, n=3, wordlen=10):
 
 def main():
     lang_codes = []
-    for roots, dirs, files in os.walk('word_lists'):
+
+    ### if testing sample lexicons
+    for roots, dirs, files in os.walk("sample_word_lists"):
         for f in files: 
-            with open("word_lists/" + f, newline='') as fin:
+            with open("sample_word_lists/" + f, newline='') as fin:
                 lang_code = f.split("_")[0]
                 lang_codes.append([lang_code])
                 
@@ -125,13 +127,35 @@ def main():
                 word_list = list(reader)
                 model = nphone_model(word_list)             
 
-                with open("utf8_ngram_models/" + lang_code + "_model.json", 'w', encoding='utf8') as fout:
+                with open("sample_utf8_ngram_models/" + lang_code + "_model.json", 'w', encoding='utf8') as fout:
                     json.dump(model, fout, ensure_ascii=False)
 
     # a list of all language codes used in this analysis
-    with open("lang_codes.tsv", 'w', newline='') as f:
+    with open("sample_lang_codes.tsv", 'w', newline='') as f:
         write =  csv.writer(f, delimiter="\t")
         write.writerows(lang_codes)
+
+    ### 
+
+    # for roots, dirs, files in os.walk('word_lists'):
+    #     for f in files: 
+    #         with open("word_lists/" + f, newline='') as fin:
+    #             lang_code = f.split("_")[0]
+    #             lang_codes.append([lang_code])
+                
+    #             print("lang_code: ", lang_code)
+            
+    #             reader = csv.reader(fin, delimiter='\t')
+    #             word_list = list(reader)
+    #             model = nphone_model(word_list)             
+
+    #             with open("utf8_ngram_models/" + lang_code + "_model.json", 'w', encoding='utf8') as fout:
+    #                 json.dump(model, fout, ensure_ascii=False)
+
+    # # a list of all language codes used in this analysis
+    # with open("lang_codes.tsv", 'w', newline='') as f:
+    #     write =  csv.writer(f, delimiter="\t")
+    #     write.writerows(lang_codes)
 
     return None 
 
